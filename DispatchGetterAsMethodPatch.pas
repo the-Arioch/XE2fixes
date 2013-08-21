@@ -14,6 +14,10 @@ unit DispatchGetterAsMethodPatch;
   
   Bug is reported to EMBT as http://qc.embarcadero.com/wc/qcmain.aspx?d=115373
   Bug is reported to FPC team as http://bugs.freepascal.org/view.php?id=24352
+  
+  More low-level info:
+    *  http://stackoverflow.com/questions/16279098/
+    *  http://stackoverflow.com/questions/16285138/
 }
 
 interface
