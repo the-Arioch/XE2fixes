@@ -3,6 +3,11 @@ unit DispatchUnsignedAsSignedPatch;
 {
   DispatchUnsignedAsSignedPatch replaces the Variants.GetDispatchInvokeArgs by a bug fixed version
   that handles DispatchUnsignedAsSigned with varRef parameters.
+  
+  Bug was introduced in Update 4 for Delphi XE2.
+  Bug was fixed in XE4
+  
+  More info: http://qc.embarcadero.com/wc/qcmain.aspx?d=111277
 }
 
 interface
