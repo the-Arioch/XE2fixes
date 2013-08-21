@@ -1,5 +1,5 @@
 unit DispatchUnsignedAsSignedPatch;
-{.$D-,L-}
+{$D-,L-}
 {
   DispatchUnsignedAsSignedPatch replaces the Variants.GetDispatchInvokeArgs by a bug fixed version
   that handles DispatchUnsignedAsSigned with varRef parameters.
