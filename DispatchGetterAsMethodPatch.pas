@@ -1,8 +1,19 @@
 unit DispatchGetterAsMethodPatch;
-{.$D-,L-}
+{$D-,L-}
 {
-  DispatchUnsignedAsSignedPatch replaces the Variants.GetDispatchInvokeArgs by a bug fixed version
-  that handles DispatchUnsignedAsSigned with varRef parameters.
+  Calling indexed properties like Microsoft Word's .CentimetersToPoint - COM exception is thrown 
+  due to broken DispatchInvoke routine in ComObj.pas ( System.Win.ComObj.pas in newer Delphi )
+  
+  To quote IDispatch original documentation from
+           http://msdn.microsoft.com/en-us/library/windows/desktop/ms221486.aspx
+
+  " Some languages cannot distinguish between retrieving a property and calling a method.
+    In this case, you should set the flags DISPATCH_PROPERTYGET and DISPATCH_METHOD."
+
+  And erroneous check for non-zero ArgCount is breaking correct behavior instead.
+  
+  Bug is reported to EMBT as http://qc.embarcadero.com/wc/qcmain.aspx?d=115373
+  Bug is reported to FPC team as http://bugs.freepascal.org/view.php?id=24352
 }
 
 interface
