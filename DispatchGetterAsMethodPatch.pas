@@ -134,6 +134,7 @@ $74, $08                      //     jz $004a20fa    -- jump conditional: relati
 );
 
 Var Patched: boolean = False;
+function GetActualAddr(Proc: Pointer): Pointer; forward;
 
 procedure Init;
 var
@@ -146,7 +147,7 @@ var
   PadBuff: array [ 0 .. patch_pattern_len - 1] of byte;
   NopBuff: array [ 0 .. patch_target_len - 1]  of byte;
 begin
-  Base := @ComObj.DispatchInvoke;
+  Base := GetActualAddr( @ComObj.DispatchInvoke );
   Pad  := Base + patch_pattern_start;
 
   Move(Pad^, PadBuff[0], patch_pattern_len);
@@ -174,6 +175,7 @@ begin
 //  _EmptyBSTR := StringToOleStr(''); // leaks memory
 end;
 
+
 procedure Fini;
 var
   Base, Pad, Target: PByte;
@@ -182,13 +184,46 @@ begin
   // Restore original opcodes
   if not Patched then exit;
 
-  Base := @ComObj.DispatchInvoke;
+  Base := GetActualAddr( @ComObj.DispatchInvoke );
 
   Target := Base + patch_target_start;
   Pad := @TargetPattern[patch_target_start - patch_pattern_start];
   WriteProcessMemory(GetCurrentProcess, Target, Pad, patch_target_len, n);
 
   Patched := False;
+end;
+
+function GetActualAddr(Proc: Pointer): Pointer;
+type
+  PWin9xDebugThunk = ^TWin9xDebugThunk;
+  TWin9xDebugThunk = packed record
+    PUSH: Byte;
+    Addr: Pointer;
+    JMP: Byte;
+    Rel: Integer;
+  end;
+
+  PAbsoluteIndirectJmp = ^TAbsoluteIndirectJmp;
+  TAbsoluteIndirectJmp = packed record
+    OpCode: Word;
+    Addr: ^Pointer;
+  end;
+
+begin
+  Result := Proc;
+  if Result <> nil then
+  begin
+    {$IFDEF CPUX64}
+    if PAbsoluteIndirectJmp(Result).OpCode = $25FF then
+      Result := PPointer(PByte(@PAbsoluteIndirectJmp(Result).OpCode) + SizeOf(TAbsoluteIndirectJmp) + Integer(PAbsoluteIndirectJmp(Result).Addr))^;
+    {$ELSE}
+    if (Win32Platform <> VER_PLATFORM_WIN32_NT) and
+       (PWin9xDebugThunk(Result).PUSH = $68) and (PWin9xDebugThunk(Result).JMP = $E9) then
+      Result := PWin9xDebugThunk(Result).Addr;
+    if PAbsoluteIndirectJmp(Result).OpCode = $25FF then
+      Result := PAbsoluteIndirectJmp(Result).Addr^;
+    {$ENDIF CPUX64}
+  end;
 end;
 
 initialization
