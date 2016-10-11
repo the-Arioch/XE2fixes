@@ -1,0 +1,366 @@
+http://qc.embarcadero.com/wc/qcmain.aspx?d=109523
+
+TFormatSettings.Create produces invalid russian LongDateFormat 
+...."ã/"
+
+no-BPL monolithic EXE:
+
+dbdata.pas.284: TFormatSettings.Create($419);
+00647F0E 8D9520FFFFFF     lea edx,[ebp-$000000e0]
+00647F14 B819040000       mov eax,$00000419
+00647F19 E89612DEFF       call TFormatSettings.Create
+
+System.SysUtils.pas.17936: 
+004291AC 5A               pop edx
+004291AD 5F               pop edi
+004291AE 5E               pop esi
+004291AF 5B               pop ebx
+004291B0 C3               ret 
+004291B1 8D4000           lea eax,[eax+$00]
+TFormatSettings.Create:
+004291B4 55               push ebp
+004291B5 8BEC             mov ebp,esp
+004291B7 B907000000       mov ecx,$00000007
+004291BC 6A00             push $00
+004291BE 6A00             push $00
+004291C0 49               dec ecx
+004291C1 75F9             jnz $004291bc
+004291C3 53               push ebx
+004291C4 56               push esi
+004291C5 57               push edi
+004291C6 8BDA             mov ebx,edx
+004291C8 8BF0             mov esi,eax
+004291CA 33C0             xor eax,eax
+004291CC 55               push ebp
+004291CD 687F944200       push $0042947f
+004291D2 64FF30           push dword ptr fs:[eax]
+004291D5 648920           mov fs:[eax],esp
+System.SysUtils.pas.17998: 
+004291D8 6A01             push $01
+004291DA 56               push esi
+004291DB E8146DFEFF       call IsValidLocale
+
+.....
+
+class function TFormatSettings.TranslateDateFormat
+
+
+System.SysUtils.pas.18560: begin
+00429848 55               push ebp
+00429849 8BEC             mov ebp,esp
+0042984B 6A00             push $00
+0042984D 6A00             push $00
+0042984F 6A00             push $00
+00429851 6A00             push $00
+00429853 6A00             push $00
+00429855 6A00             push $00
+00429857 6A00             push $00
+00429859 6A00             push $00
+0042985B 53               push ebx
+0042985C 56               push esi
+0042985D 57               push edi
+0042985E 894DF4           mov [ebp-$0c],ecx
+00429861 8955F8           mov [ebp-$08],edx
+00429864 8BF8             mov edi,eax
+00429866 8B7508           mov esi,[ebp+$08]
+00429869 33C0             xor eax,eax
+0042986B 55               push ebp
+0042986C 68869A4200       push $00429a86
+00429871 64FF30           push dword ptr fs:[eax]
+00429874 648920           mov fs:[eax],esp
+System.SysUtils.pas.18561: I := 1;
+00429877 BB01000000       mov ebx,$00000001
+System.SysUtils.pas.18562: Result := '';
+0042987C 8BC6             mov eax,esi
+0042987E E8C9E1FDFF       call @UStrClr
+System.SysUtils.pas.18563: LFormat := GetLocaleStr(Locale, LocaleType, Default);
+00429883 8D45FC           lea eax,[ebp-$04]
+00429886 50               push eax
+00429887 8B4DF4           mov ecx,[ebp-$0c]
+0042988A 8B55F8           mov edx,[ebp-$08]
+0042988D 8BC7             mov eax,edi
+0042988F E8A8F8FFFF       call GetLocaleStr
+System.SysUtils.pas.18564: CalendarType := StrToIntDef(GetLocaleStr(Locale, LOCALE_ICALENDARTYPE, '1'), 1);
+00429894 8D45EC           lea eax,[ebp-$14]
+00429897 50               push eax
+00429898 B9A49A4200       mov ecx,$00429aa4
+0042989D BA09100000       mov edx,$00001009
+004298A2 8BC7             mov eax,edi
+004298A4 E893F8FFFF       call GetLocaleStr
+004298A9 8B45EC           mov eax,[ebp-$14]
+004298AC BA01000000       mov edx,$00000001
+004298B1 E82A8EFFFF       call StrToIntDef
+System.SysUtils.pas.18565: if not (CalendarType in [CAL_JAPAN, CAL_TAIWAN, CAL_KOREA]) then
+004298B6 83C0FD           add eax,-$03
+004298B9 83E803           sub eax,$03
+004298BC 0F8288010000     jb $00429a4a
+System.SysUtils.pas.18567: RemoveEra := SysLocale.PriLangID in [LANG_JAPANESE, LANG_CHINESE, LANG_KOREAN];
+004298C2 A1CF4D9100       mov eax,[$00914dcf]
+004298C7 83E804           sub eax,$04
+004298CA 740C             jz $004298d8
+004298CC 83C0F3           add eax,-$0d
+004298CF 83E802           sub eax,$02
+004298D2 7204             jb $004298d8
+004298D4 33C0             xor eax,eax
+004298D6 EB02             jmp $004298da
+004298D8 B001             mov al,$01
+System.SysUtils.pas.18568: if RemoveEra then
+004298DA 84C0             test al,al
+004298DC 743B             jz $00429919
+004298DE EB2B             jmp $0042990b
+System.SysUtils.pas.18572: if not (LFormat[I] in ['g', 'G']) then
+004298E0 8B45FC           mov eax,[ebp-$04]
+004298E3 0FB77C58FE       movzx edi,[eax+ebx*2-$02]
+004298E8 8BC7             mov eax,edi
+004298EA 6683E847         sub ax,$47
+004298EE 741A             jz $0042990a
+004298F0 6683E820         sub ax,$20
+004298F4 7414             jz $0042990a
+System.SysUtils.pas.18573: Result := Result + LFormat[I];
+004298F6 8D45E8           lea eax,[ebp-$18]
+004298F9 8BD7             mov edx,edi
+004298FB E8CCF1FDFF       call @UStrFromWChar
+00429900 8B55E8           mov edx,[ebp-$18]
+00429903 8BC6             mov eax,esi
+00429905 E8AEF3FDFF       call @UStrCat
+System.SysUtils.pas.18574: Inc(I);
+0042990A 43               inc ebx
+System.SysUtils.pas.18570: While I <= Length(LFormat) do
+0042990B 8B45FC           mov eax,[ebp-$04]
+0042990E E831E6FDFF       call @UStrLen
+00429913 3BD8             cmp ebx,eax
+00429915 7EC9             jle $004298e0
+00429917 EB0A             jmp $00429923
+System.SysUtils.pas.18578: Result := LFormat;
+00429919 8BC6             mov eax,esi
+0042991B 8B55FC           mov edx,[ebp-$04]
+0042991E E809E5FDFF       call @UStrAsg
+System.SysUtils.pas.18581: FixDateSeparator(Result);
+00429923 55               push ebp
+00429924 8BC6             mov eax,esi
+00429926 E8EDFEFFFF       call FixDateSeparator
+0042992B 59               pop ecx
+System.SysUtils.pas.18582: Exit;
+0042992C E932010000       jmp $00429a63
+
+.....
+
+FixDateSeparator:
+System.SysUtils.pas.18547: begin
+00429818 55               push ebp
+00429819 8BEC             mov ebp,esp
+0042981B 53               push ebx
+0042981C 8BD8             mov ebx,eax
+System.SysUtils.pas.18548: P := PChar(DateFormat);
+0042981E 8B03             mov eax,[ebx]
+00429820 E87FF2FDFF       call @UStrToPWChar
+System.SysUtils.pas.18549: if P = nil then
+00429825 85C0             test eax,eax
+00429827 741B             jz $00429844
+System.SysUtils.pas.18550: Exit;
+00429829 EB11             jmp $0042983c
+System.SysUtils.pas.18554: if P^ = Separator then
+0042982B 8B4D08           mov ecx,[ebp+$08]
+0042982E 663B510C         cmp dx,[ecx+$0c]
+00429832 7505             jnz $00429839
+System.SysUtils.pas.18555: P^ := '/';
+00429834 66C7002F00       mov word ptr [eax],$002f
+System.SysUtils.pas.18556: Inc(P);
+00429839 83C002           add eax,$02
+System.SysUtils.pas.18552: while P^ <> #0 do
+0042983C 0FB710           movzx edx,[eax]
+0042983F 6685D2           test dx,dx
+00429842 75E7             jnz $0042982b
+System.SysUtils.pas.18558: end;
+00429844 5B               pop ebx
+00429845 5D               pop ebp
+00429846 C3               ret 
+00429847 90               nop 
+
+-----
+
+Win 32 BPL
+
+dbdata.pas.284: TFormatSettings.Create($419);
+004847BD 8D9530FFFFFF     lea edx,[ebp-$000000d0]
+004847C3 B819040000       mov eax,$00000419
+004847C8 E8D7DAF7FF       call $004022a4
+....
+004022A4 FF2560097300     jmp dword ptr [$00730960]
+004022AA 8BC0             mov eax,eax
+....
+
+
+System.SysUtils.pas.17936: 
+5007123C 5A               pop edx
+5007123D 5F               pop edi
+5007123E 5E               pop esi
+5007123F 5B               pop ebx
+50071240 C3               ret 
+50071241 8D4000           lea eax,[eax+$00]
+	
+TFormatSettings.Create:
+System.SysUtils.pas.17997: begin
+50071244 55               push ebp
+50071245 8BEC             mov ebp,esp
+50071247 B907000000       mov ecx,$00000007
+5007124C 6A00             push $00
+5007124E 6A00             push $00
+50071250 49               dec ecx
+50071251 75F9             jnz $5007124c
+50071253 53               push ebx
+50071254 56               push esi
+50071255 57               push edi
+50071256 8BDA             mov ebx,edx
+50071258 8BF0             mov esi,eax
+5007125A 33C0             xor eax,eax
+5007125C 55               push ebp
+5007125D 680F150750       push $5007150f
+50071262 64FF30           push dword ptr fs:[eax]
+50071265 648920           mov fs:[eax],esp
+System.SysUtils.pas.17998: if not IsValidLocale(Locale, LCID_INSTALLED) then
+50071268 6A01             push $01
+5007126A 56               push esi
+5007126B E8209DFDFF       call $5004af90
+
+.........
+
+System.SysUtils.pas.18012: ShortDateFormat := TranslateDateFormat(Locale, LOCALE_SSHORTDATE, 'm/d/yy', DateSeparator);
+50071356 57               push edi
+50071357 8D45E0           lea eax,[ebp-$20]
+5007135A 50               push eax
+5007135B B93C150750       mov ecx,$5007153c
+50071360 BA1F000000       mov edx,$0000001f
+50071365 8BC6             mov eax,esi
+50071367 E86C050000       call $500718d8
+5007136C 8B55E0           mov edx,[ebp-$20]
+5007136F 8D430C           lea eax,[ebx+$0c]
+50071372 E865D7FCFF       call $5003eadc
+
+System.SysUtils.pas.18013: LongDateFormat := TranslateDateFormat(Locale, LOCALE_SLONGDATE, 'mmmm d, yyyy', DateSeparator);
+50071377 0FB74306         movzx eax,[ebx+$06]
+5007137B 50               push eax
+5007137C 8D45DC           lea eax,[ebp-$24]
+5007137F 50               push eax
+50071380 B958150750       mov ecx,$50071558
+50071385 BA20000000       mov edx,$00000020
+5007138A 8BC6             mov eax,esi
+5007138C E847050000       call $500718d8
+50071391 8B55DC           mov edx,[ebp-$24]
+50071394 8D4310           lea eax,[ebx+$10]
+50071397 E840D7FCFF       call $5003eadc
+
+.....
+
+System.SysUtils.pas.18561: I := 1;
+50071907 BB01000000       mov ebx,$00000001
+System.SysUtils.pas.18562: Result := '';
+5007190C 8BC6             mov eax,esi
+5007190E E8E9CDFCFF       call $5003e6fc
+System.SysUtils.pas.18563: LFormat := GetLocaleStr(Locale, LocaleType, Default);
+50071913 8D45FC           lea eax,[ebp-$04]
+50071916 50               push eax
+50071917 8B4DF4           mov ecx,[ebp-$0c]
+5007191A 8B55F8           mov edx,[ebp-$08]
+5007191D 8BC7             mov eax,edi
+5007191F E8A8F8FFFF       call $500711cc
+System.SysUtils.pas.18564: CalendarType := StrToIntDef(GetLocaleStr(Locale, LOCALE_ICALENDARTYPE, '1'), 1);
+50071924 8D45EC           lea eax,[ebp-$14]
+50071927 50               push eax
+50071928 B9341B0750       mov ecx,$50071b34
+5007192D BA09100000       mov edx,$00001009
+50071932 8BC7             mov eax,edi
+50071934 E893F8FFFF       call $500711cc
+50071939 8B45EC           mov eax,[ebp-$14]
+5007193C BA01000000       mov edx,$00000001
+50071941 E89A6BFFFF       call $500684e0
+System.SysUtils.pas.18565: if not (CalendarType in [CAL_JAPAN, CAL_TAIWAN, CAL_KOREA]) then
+50071946 83C0FD           add eax,-$03
+50071949 83E803           sub eax,$03
+5007194C 0F8288010000     jb $50071ada
+System.SysUtils.pas.18567: RemoveEra := SysLocale.PriLangID in [LANG_JAPANESE, LANG_CHINESE, LANG_KOREAN];
+50071952 A1FF7D2050       mov eax,[$50207dff]
+50071957 83E804           sub eax,$04
+5007195A 740C             jz $50071968
+5007195C 83C0F3           add eax,-$0d
+5007195F 83E802           sub eax,$02
+50071962 7204             jb $50071968
+50071964 33C0             xor eax,eax
+50071966 EB02             jmp $5007196a
+50071968 B001             mov al,$01
+System.SysUtils.pas.18568: if RemoveEra then
+5007196A 84C0             test al,al
+5007196C 743B             jz $500719a9
+5007196E EB2B             jmp $5007199b
+System.SysUtils.pas.18572: if not (LFormat[I] in ['g', 'G']) then
+50071970 8B45FC           mov eax,[ebp-$04]
+50071973 0FB77C58FE       movzx edi,[eax+ebx*2-$02]
+50071978 8BC7             mov eax,edi
+5007197A 6683E847         sub ax,$47
+5007197E 741A             jz $5007199a
+50071980 6683E820         sub ax,$20
+50071984 7414             jz $5007199a
+System.SysUtils.pas.18573: Result := Result + LFormat[I];
+50071986 8D45E8           lea eax,[ebp-$18]
+50071989 8BD7             mov edx,edi
+5007198B E8D0E1FCFF       call $5003fb60
+50071990 8B55E8           mov edx,[ebp-$18]
+50071993 8BC6             mov eax,esi
+50071995 E8B2E3FCFF       call $5003fd4c
+System.SysUtils.pas.18574: Inc(I);
+5007199A 43               inc ebx
+System.SysUtils.pas.18570: While I <= Length(LFormat) do
+5007199B 8B45FC           mov eax,[ebp-$04]
+5007199E E8D1D2FCFF       call $5003ec74
+500719A3 3BD8             cmp ebx,eax
+500719A5 7EC9             jle $50071970
+500719A7 EB0A             jmp $500719b3
+System.SysUtils.pas.18578: Result := LFormat;
+500719A9 8BC6             mov eax,esi
+500719AB 8B55FC           mov edx,[ebp-$04]
+500719AE E829D1FCFF       call $5003eadc
+System.SysUtils.pas.18581: FixDateSeparator(Result);
+500719B3 55               push ebp
+500719B4 8BC6             mov eax,esi
+500719B6 E8EDFEFFFF       call $500718a8
+500719BB 59               pop ecx
+System.SysUtils.pas.18582: Exit;
+500719BC E932010000       jmp $50071af3
+
+......
+
+500718A2 5D               pop ebp
+500718A3 C20C00           ret $000c
+500718A6 8BC0             mov eax,eax
+
+FixDateSeparator:
+System.SysUtils.pas.18547: begin
+500718A8 55               push ebp
+500718A9 8BEC             mov ebp,esp
+500718AB 53               push ebx
+500718AC 8BD8             mov ebx,eax
+System.SysUtils.pas.18548: P := PChar(DateFormat);
+500718AE 8B03             mov eax,[ebx]
+500718B0 E883E2FCFF       call $5003fb38
+System.SysUtils.pas.18549: if P = nil then
+500718B5 85C0             test eax,eax
+500718B7 741B             jz $500718d4
+System.SysUtils.pas.18550: Exit;
+500718B9 EB11             jmp $500718cc
+System.SysUtils.pas.18554: if P^ = Separator then
+500718BB 8B4D08           mov ecx,[ebp+$08]
+500718BE 663B510C         cmp dx,[ecx+$0c]
+500718C2 7505             jnz $500718c9
+System.SysUtils.pas.18555: P^ := '/';
+500718C4 66C7002F00       mov word ptr [eax],$002f
+System.SysUtils.pas.18556: Inc(P);
+500718C9 83C002           add eax,$02
+System.SysUtils.pas.18552: while P^ <> #0 do
+500718CC 0FB710           movzx edx,[eax]
+500718CF 6685D2           test dx,dx
+500718D2 75E7             jnz $500718bb
+System.SysUtils.pas.18558: end;
+500718D4 5B               pop ebx
+500718D5 5D               pop ebp
+500718D6 C3               ret 
+500718D7 90               nop 
