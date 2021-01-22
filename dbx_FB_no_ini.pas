@@ -1,8 +1,10 @@
 unit dbx_FB_no_ini;
 
-(* http://andy.jgknet.de/blog/2010/11/dbx-without-deploying-dbxdrivers-ini/
-   to deploy a database application without a DBXDrivers.ini file.
-
+(* How to deploy a database application without a DBXDrivers.ini file.
+   XE2 + Firebird 2.x port, with some tweaks.
+   Original: http://andy.jgknet.de/blog/2010/11/dbx-without-deploying-dbxdrivers-ini/
+   Now: https://www.idefixpack.de/blog/2010/11/dbx-without-deploying-dbxdrivers-ini/
+   
    Quote: If you want to connect to an other database vendor, you 
      have to adjust the string literals in TDBXInternalProperties.Create 
 	 and the driver name in the RegisterDriverClass(‘MySQL’, ..) call. 
