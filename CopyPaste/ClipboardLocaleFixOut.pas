@@ -5,14 +5,35 @@
 // добавляя CF_LOCALE, если копирующая программа забыла его добавить.
 unit ClipboardLocaleFixOut;
 
+{$WARN SYMBOL_PLATFORM OFF}
+
+{$Define HookAtWill} // отладки для ~ for debug purposes
+
 {$T+}
 interface
 
-uses Windows;
+{$IfDef HookAtWill}
+procedure InstallHook;
+procedure RemoveHook;
+{$EndIf HookAtWill}
 
+{$IfNDef HookAtWill}
 implementation
+uses Windows,
+     SysUtils; // Win32Platform
+{$EndIf HookAtWill}
 
-uses SysUtils; // Win32Platform
+var
+  HookMethod: byte;
+  HookInstalled: boolean;
+  HookError: (heNoError, heNotWinNT, heNoMethod, heCanNotRemove, heCanNotInstall);
+  HookOriginalAddress: pointer;
+
+{$IfDef HookAtWill}
+implementation
+uses Windows,
+     SysUtils; // Win32Platform
+{$EndIf HookAtWill}
 
 {$Region ' -= Win32 patcher =- '}
 
@@ -132,6 +153,121 @@ begin
 end;
 
 // ==================
+type
+  PWindowsHotPatch = ^RWindowsHotPatch;
+  RWindowsHotPatch = packed record
+    OpCode: Word;
+    const PreBuffLen = 5;
+    const TargetOpCode = $FF8B;  // MOV EDI, EDI
+          FillerOpCode1 = $90; FillerOpCode2 = $CC;  // NOP = XCHG EAX, EAX; INT 3
+
+    function IsThisPattern: boolean;
+    procedure WriteHookInPlace(const NewCode: pointer);
+    procedure WriteHookToBuffer(const NewCode, OldCode: pointer);
+    procedure RemoveHook;
+  end;
+
+  PWindowsHotPatchBuffer = ^RWindowsHotPatchBuffer;
+  RWindowsHotPatchBuffer = packed record
+    CodeBuffer: array [1..RWindowsHotPatch.PreBuffLen] of byte;
+    HPTarget: RWindowsHotPatch;
+    procedure WriteHookInPlace(const NewCode: pointer); inline;
+    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; inline;
+    class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; inline; static;
+  end;
+
+{ RWindowsHotPatch }
+
+function RWindowsHotPatch.IsThisPattern: boolean;
+var PB: PByte; i: integer;
+begin
+  Result := OpCode = TargetOpCode;
+  if not Result then exit;
+
+  PB := pointer(@Self);
+  for i := 1 to PreBuffLen do begin
+    Dec(PB);
+    Result := (PB^ = FillerOpCode1) or (PB^ = FillerOpCode2);
+    if not Result then exit;
+  end;
+end;
+
+procedure RWindowsHotPatch.RemoveHook;
+var PB: PByte; i: integer;
+begin
+  OpCode := TargetOpCode;
+  PB := pointer(@Self);
+  for i := 1 to PreBuffLen do begin
+    Dec(PB);
+    PB^ := FillerOpCode2;
+  end;
+end;
+
+procedure RWindowsHotPatch.WriteHookInPlace(const NewCode: pointer);
+begin
+  WriteHookToBuffer(NewCode, @Self);
+end;
+
+procedure RWindowsHotPatch.WriteHookToBuffer(const NewCode, OldCode: pointer);
+var PJ: PRelativeLongJmp;
+    w: word; b2: WordRec absolute w;
+begin
+  Assert(PreBuffLen = SizeOf(RRelativeLongJmp), 'RWindowsHotPatch.WriteHook');
+
+  b2.Lo := $EB; //  EBF9  jmp SHORT PTR $-5
+  ShortInt(b2.Hi) := -( SizeOf(b2) + PreBuffLen );
+
+  PJ := Pointer(PByte(@Self) - PreBuffLen);
+
+  PJ^.WriteHookToBuffer(NewCode, OldCode);
+
+  PWord(@Self)^ := w;
+end;
+
+{ RWindowsHotPatchBuffer }
+
+procedure RWindowsHotPatchBuffer.WriteHookInPlace(const NewCode: pointer);
+begin
+  WriteHookToBuffer( NewCode, @Self.HPTarget, @Self );
+end;
+
+class procedure RWindowsHotPatchBuffer.WriteHookToBuffer
+  (const NewCode, OldCode, Buffer: pointer);
+begin
+  PWindowsHotPatchBuffer(Buffer)^.HPTarget.WriteHookToBuffer(NewCode, OldCode);
+end;
+
+procedure RWindowsHotPatchBuffer.WriteHookToBuffer(const NewCode,
+  OldCode: pointer);
+begin
+  WriteHookToBuffer( NewCode, OldCode, @Self );
+end;
+
+// ==============
+
+type
+  PFastSysCall = ^RFastSysCall;
+  RFastSysCall = packed record
+    OpCode: byte;
+    Value: NativeInt;
+    const EtalonOpCode = $B8;  // MOV EAX, CONST
+          EtalonOpCodeMask = $07; // MOV EAX..EDI, CONST
+
+    function IsThisPattern: boolean; overload; inline;
+    class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
+  end;
+
+{ RFastSysCall }
+
+class function RFastSysCall.IsThisPattern(const at: pointer): boolean;
+begin
+  Result := PFastSysCall(at)^.OpCode and not EtalonOpCodeMask = EtalonOpCode;
+end;
+
+function RFastSysCall.IsThisPattern: boolean;
+begin
+  Result := IsThisPattern(@Self);
+end;
 
 {$EndRegion}
 
@@ -190,12 +326,6 @@ asm
   JMP DWORD PTR [ContinueCloseClipboard]
 end;
 
-var
-  HookMethod: byte;
-  HookInstalled: boolean;
-  HookError: (heNoError, heNotWinNT, heNoMethod);
-  HookOriginalAddress: pointer;
-
 function StartOfCloseClipboard: pointer;
 begin
   Result := GetProcAddress(LoadLibrary('user32.dll'), 'CloseClipboard' );
@@ -234,6 +364,7 @@ begin
      HookMethod := detectMethod;
 
   if (HookMethod > 0) and (HookError = heNoError) then begin
+     HookError := heCanNotInstall;
      case HookMethod of
        1: InstallMethod_HotPatch;
        2: InstallMethod_FastSysCall;
@@ -245,14 +376,107 @@ begin
   end;
 end;
 
+procedure RemoveHook;
+begin
+  if not HookInstalled then exit;
 
-function CanMethod_HotPatch:  boolean; begin end;
-function CanMethod_FastSysCall: boolean; begin end;
+  case HookMethod of
+    1: RemoveMethod_HotPatch;
+    2: RemoveMethod_FastSysCall;
+  else
+    HookError := heNoMethod;
+  end;
 
-procedure InstallMethod_HotPatch; begin end;
-procedure InstallMethod_FastSysCall; begin end;
+  if HookInstalled then
+     HookError := heCanNotRemove;
+end;
 
-procedure RemoveMethod_HotPatch; begin end;
-procedure RemoveMethod_FastSysCall; begin end;
+function CanMethod_HotPatch: boolean;
+begin
+  Result := PWindowsHotPatch(HookOriginalAddress)^.IsThisPattern;
+end;
+
+function CanMethod_FastSysCall: boolean;
+begin
+  Result := PFastSysCall(HookOriginalAddress)^.IsThisPattern;
+end;
+
+procedure InstallMethod_HotPatch;
+var
+  OldProt: Cardinal;
+  HP: PWindowsHotPatchBuffer;
+begin
+  HP := Pointer(PByte(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
+  Assert( @HP^.HPTarget = HookOriginalAddress, 'InstallMethod_HotPatch' );
+
+  // force memory pages committed
+{$O-}
+  OldProt := PNativeUInt(HookOriginalAddress)^;
+  OldProt := PNativeUInt(HP)^;
+{$O+}
+
+  Win32Check( VirtualProtect( HP, SizeOf(HP^), PAGE_EXECUTE_READWRITE, OldProt) );
+  try
+    HP^.WriteHookInPlace(@InterceptCloseClipboard);
+  finally
+    Win32Check( VirtualProtect( HP, SizeOf(HP^), OldProt, OldProt) );
+  end;
+
+  HookInstalled := True;
+  HookError := heNoError;
+end;
+
+procedure RemoveMethod_HotPatch;
+var
+  OldProt: Cardinal;
+  HP: PWindowsHotPatchBuffer;
+begin
+  HP := Pointer(PByte(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
+  Assert( @HP^.HPTarget = HookOriginalAddress, 'RemoveMethod_HotPatch' );
+
+  // force memory pages committed
+{$O-}
+  OldProt := PNativeUInt(HookOriginalAddress)^;
+  OldProt := PNativeUInt(HP)^;
+{$O+}
+
+  Win32Check( VirtualProtect( HP, SizeOf(HP^), PAGE_EXECUTE_READWRITE, OldProt) );
+  try
+    HP^.HPTarget.RemoveHook;
+  finally
+    Win32Check( VirtualProtect( HP, SizeOf(HP^), OldProt, OldProt) );
+  end;
+
+  HookInstalled := False;
+  HookError := heNoError;
+end;
+
+procedure InstallMethod_FastSysCall;
+begin
+  // copy MOV EAX, XXX to CloseClipboard5Bytes
+
+  // install patch
+
+  HookInstalled := True;
+  HookError := heNoError;
+end;
+
+procedure RemoveMethod_FastSysCall;
+begin
+  // remove patch
+
+  // flood NOPx5 to CloseClipboard5Bytes
+
+
+  HookInstalled := False;
+  HookError := heNoError;
+end;
+
+{$IfNDef HookAtWill}
+initialization
+   InstallHook;
+finalization
+   RemoveHook;
+{$EndIf HookAtWill}
 
 end.

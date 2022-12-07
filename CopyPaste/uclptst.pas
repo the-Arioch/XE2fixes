@@ -53,6 +53,33 @@ var gb, InjectLCID: boolean;
   msgA: AnsiString = 'Жёлтый жёсткий жук';
   msgU: UnicodeString = 'Мерзкое мёрзлое место';
 
+
+//{$o-}
+//procedure dummy2;
+//label L1, L2;
+//begin
+////  exit;
+//  asm
+//    MOV EDI, EDI
+//  end;
+//
+//  goto L2;
+//
+//  asm
+//@@1:
+//    NOP; NOP; NOP; NOP; NOP
+//
+//L1:
+//    jmp SHORT PTR @@1
+//
+//@@2:
+//    ret
+//  end;
+//L2:
+//  goto L1
+//end;
+//{$o+}
+
 procedure TForm31.FormCreate(Sender: TObject);
 begin
   Tag := GetClipboardSequenceNumber; // linker
@@ -63,6 +90,7 @@ end;
 procedure TForm31.btnCCCClick(Sender: TObject);
 begin
   gb := CloseClipboard;
+//  dummy2;
 end;
 
 procedure TForm31.btnCOCClick(Sender: TObject);
