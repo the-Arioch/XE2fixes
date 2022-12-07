@@ -14,6 +14,127 @@ implementation
 
 uses SysUtils; // Win32Platform
 
+{$Region ' -= Win32 patcher =- '}
+
+{$if CompilerVersion < 19}
+type
+  NativeUInt = Cardinal; NativeInt = Integer;
+// https://blog.dummzeuch.de/2018/09/08/nativeint-nativeuint-type-in-various-delphi-versions/
+// https://stackoverflow.com/questions/7630781/delphi-2007-and-xe2-using-nativeint
+{$ifend}
+
+type
+  PAbsoluteIndirectJmp = ^RAbsoluteIndirectJmp;
+  RAbsoluteIndirectJmp = packed record
+    OpCode: Word;
+    Addr: ^Pointer;
+    const EtalonOpCode = $25FF;
+
+    function IsThisPattern: boolean; overload; inline;
+    class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
+
+    function TargetAdress: Pointer; overload; inline;
+    class function TargetAdress(const at: pointer): Pointer; overload; inline; static;
+  end;
+
+{ RAbsoluteIndirectJmp }
+
+class function RAbsoluteIndirectJmp.IsThisPattern(const at: pointer): boolean;
+begin
+  Result := PAbsoluteIndirectJmp(at)^.OpCode = EtalonOpCode;
+end;
+
+function RAbsoluteIndirectJmp.IsThisPattern: boolean;
+begin
+  Result := IsThisPattern(@Self);
+end;
+
+class function RAbsoluteIndirectJmp.TargetAdress(const at: pointer): Pointer;
+begin
+  Assert(IsThisPattern(at), 'Wrong OpCode!');
+  Result := PAbsoluteIndirectJmp(at)^.Addr^;
+end;
+
+function RAbsoluteIndirectJmp.TargetAdress: Pointer;
+begin
+  Result := TargetAdress(@Self);
+end;
+
+// ==================
+
+type
+  PRelativeLongJmp = ^RRelativeLongJmp;
+  RRelativeLongJmp = packed record
+    OpCode: byte;
+    Offset: NativeInt;
+    const EtalonOpCode = $E9;
+
+    function IsThisPattern: boolean; overload; inline;
+    class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
+
+    function TargetAdress: Pointer; overload; inline;
+    class function TargetAdress(const at: pointer): Pointer; overload; inline; static;
+
+    procedure WriteHookInPlace(const NewCode: pointer); inline;
+    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; inline;
+    class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; inline; static;
+  end;
+
+{ RRelativeLongJmp }
+
+class function RRelativeLongJmp.IsThisPattern(const at: pointer): boolean;
+begin
+  Result := PRelativeLongJmp(at)^.OpCode = EtalonOpCode;
+end;
+
+function RRelativeLongJmp.IsThisPattern: boolean;
+begin
+  Result := IsThisPattern(@Self);
+end;
+
+class function RRelativeLongJmp.TargetAdress(const at: pointer): Pointer;
+begin
+{$R-}
+  Result := Pointer(
+       NativeInt(at)
+       + PRelativeLongJmp(at)^.Offset
+       + SizeOf(RRelativeLongJmp)
+  );
+// https://wasm.in/threads/jmp-v-e9-kak-opredelit-operand-mashinnogo-koda.25851
+// https://stackoverflow.com/questions/8196835/calculate-the-jmp-opcodes
+end;
+
+function RRelativeLongJmp.TargetAdress: Pointer;
+begin
+  Result := TargetAdress(@Self);
+end;
+
+class procedure RRelativeLongJmp.WriteHookToBuffer(const NewCode, OldCode,
+  Buffer: pointer);
+begin
+  with PRelativeLongJmp(Buffer)^ do begin
+    Offset := NativeInt(NewCode)
+            - SizeOf(RRelativeLongJmp)
+            - NativeInt(OldCode);
+    Assert( NewCode = TargetAdress(), 'RRelativeLongJmp.WriteHook' );
+    OpCode := EtalonOpCode;
+  end;
+end;
+
+procedure RRelativeLongJmp.WriteHookToBuffer(const NewCode, OldCode: pointer);
+begin
+  WriteHookToBuffer(NewCode, OldCode, @Self);
+end;
+
+procedure RRelativeLongJmp.WriteHookInPlace(const NewCode: pointer);
+begin
+  WriteHookToBuffer(NewCode, @Self, @Self);
+end;
+
+// ==================
+
+{$EndRegion}
+
 procedure InjectLocale;
 var
   Loc: ^LCID;
@@ -74,45 +195,6 @@ var
   HookInstalled: boolean;
   HookError: (heNoError, heNotWinNT, heNoMethod);
   HookOriginalAddress: pointer;
-
-type
-  PAbsoluteIndirectJmp = ^RAbsoluteIndirectJmp;
-  RAbsoluteIndirectJmp = packed record
-    OpCode: Word;
-    Addr: ^Pointer;
-    const EtalonOpCode = $25FF;
-
-    function IsThisPattern: boolean; overload; inline;
-    class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
-
-    function TargetAdress: Pointer; overload; inline;
-    class function TargetAdress(const at: pointer): Pointer; overload; inline; static;
-  end;
-
-{ RAbsoluteIndirectJmp }
-
-class function RAbsoluteIndirectJmp.IsThisPattern(const at: pointer): boolean;
-begin
-  Result := PAbsoluteIndirectJmp(at)^.OpCode = EtalonOpCode;
-end;
-
-function RAbsoluteIndirectJmp.IsThisPattern: boolean;
-begin
-  Result := IsThisPattern(@Self);
-end;
-
-class function RAbsoluteIndirectJmp.TargetAdress(const at: pointer): Pointer;
-begin
-  Assert(IsThisPattern(at), 'Wrong OpCode!');
-  Result := PAbsoluteIndirectJmp(at)^.Addr^;
-end;
-
-function RAbsoluteIndirectJmp.TargetAdress: Pointer;
-begin
-  Result := TargetAdress(@Self);
-end;
-
-// ==================
 
 function StartOfCloseClipboard: pointer;
 begin
