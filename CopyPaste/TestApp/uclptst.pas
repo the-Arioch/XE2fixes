@@ -71,14 +71,11 @@ begin
   if B then Result := 'TRUE' else RESULT := 'FALSE';
 end;
 
-function RemoveClipboardFormatListener(hWndNewViewer: HWND): BOOL; stdcall;
-external user32 name 'RemoveClipboardFormatListener';
-{$EXTERNALSYM  RemoveClipboardFormatListener}
-
-function AddClipboardFormatListener(hWndNewViewer: HWND): BOOL; stdcall;
-external user32 name 'AddClipboardFormatListener';
-{$EXTERNALSYM  AddClipboardFormatListener}
 {$ifend}
+
+var // would be missed on pre-Vista
+  RemoveClipboardFormatListener, AddClipboardFormatListener:
+    function (hWndNewViewer: HWND): BOOL; stdcall;
 
 {$R *.dfm}
 
@@ -342,19 +339,30 @@ end;
 
 procedure TForm31.FormHide(Sender: TObject);
 begin
-  RemoveClipboardFormatListener(Handle);
+  if nil <> @RemoveClipboardFormatListener then
+     RemoveClipboardFormatListener(Handle);
 end;
 
 procedure TForm31.FormShow(Sender: TObject);
+var
+  UPtr: THandle;
 begin
-  AddClipboardFormatListener(Handle);
-  SetClipboardViewer(Handle);
+  UPtr := LoadLibrary('user32.dll');
 
   Memo1.Lines.Add(
     IntToHex( NativeUInt(
-        GetProcAddress( LoadLibrary('user32.dll'), 'CloseClipboard' )),
-        2*SizeOf(pointer))
+        GetProcAddress( UPtr, 'CloseClipboard' )), 2*SizeOf(pointer))
   );
+
+  AddClipboardFormatListener :=
+       GetProcAddress( UPtr, 'AddClipboardFormatListener' );
+  RemoveClipboardFormatListener :=
+       GetProcAddress( UPtr, 'RemoveClipboardFormatListener' );
+
+  if nil <> @AddClipboardFormatListener then
+     AddClipboardFormatListener(Handle);
+
+  SetClipboardViewer(Handle);
 end;
 
 procedure TForm31.WMCLIPBOARDUPDATE(var m: TMessage);

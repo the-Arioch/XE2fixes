@@ -39,6 +39,7 @@ uses Windows,
 
 {$if CompilerVersion < 19}
 type
+  SIZE_T = DWORD;
   NativeUInt = Cardinal; NativeInt = Integer;
 // https://blog.dummzeuch.de/2018/09/08/nativeint-nativeuint-type-in-various-delphi-versions/
 // https://stackoverflow.com/questions/7630781/delphi-2007-and-xe2-using-nativeint
@@ -140,8 +141,8 @@ var PJmp: PRelativeLongJmp absolute Buffer;
 begin
   with PJmp^ do begin
     Offset := NativeInt(NewCode)
-            - SizeOf(RRelativeLongJmp)
-            - NativeInt(OldCode);
+	    - SizeOf(RRelativeLongJmp)
+	    - NativeInt(OldCode);
     Assert( NewCode = TargetAddress(), 'RRelativeLongJmp.WriteHook' );
     OpCode := EtalonOpCode;
   end;
@@ -410,6 +411,7 @@ end;
 function CanMethod_FastSysCall: boolean;
 begin
   Result := PFastSysCall(HookOriginalAddress)^.IsThisPattern;
+  Assert( SizeOf(RRelativeLongJmp) = SizeOf(RFastSysCall), 'CanMethod_FastSysCall' );
 end;
 
 procedure InstallMethod_HotPatch;
@@ -466,21 +468,67 @@ begin
 end;
 
 procedure InstallMethod_FastSysCall;
+var
+  PJmp: PRelativeLongJmp;
+  PostJmp: PRelativeLongJmp absolute ContinueCloseClipboard;
+  PHook: pointer;
+  n: SIZE_T;
+  OldProt: Cardinal;
+  Success: Boolean;
 begin
   // copy MOV EAX, XXX to CloseClipboard5Bytes
+  PHook := @ContinueCloseClipboard;
+  PJmp := HookOriginalAddress;
+
+  Success := WriteProcessMemory(GetCurrentProcess,
+		@CloseClipboard5Bytes, PJmp, SizeOf(PJmp^), n)
+                and (n = SizeOf(RFastSysCall));
+
+  HookError := heCanNotInstall;
+  if not Success then exit;
 
   // install patch
+
+  PostJmp := PJmp; Inc(PostJmp); // no pointermath in D2007
+
+  Win32Check( VirtualProtect( PJmp, SizeOf(PJmp^), PAGE_EXECUTE_READWRITE, OldProt) );
+  try
+    PJmp^.WriteHookInPlace(@InterceptCloseClipboard);
+  finally
+    Win32Check( VirtualProtect( PJmp, SizeOf(PJmp^), OldProt, OldProt) );
+  end;
 
   HookInstalled := True;
   HookError := heNoError;
 end;
 
 procedure RemoveMethod_FastSysCall;
+var
+  PJmp: PRelativeLongJmp;
+  PHook: pointer;
+  n: SIZE_T;
+  OldProt: Cardinal;
+  Success: Boolean;
 begin
   // remove patch
+  PJmp := HookOriginalAddress;
+
+  Success := WriteProcessMemory(GetCurrentProcess,
+			  PJmp, @CloseClipboard5Bytes, SizeOf(PJmp^), n)
+	     and (n = SizeOf(RFastSysCall));
+
+  HookError := heCanNotRemove;
+  if not Success then exit;
 
   // flood NOPx5 to CloseClipboard5Bytes
-
+  PHook := @CloseClipboard5Bytes;
+  Win32Check( VirtualProtect( PHook, SizeOf(PJmp^), PAGE_EXECUTE_READWRITE, OldProt) );
+  try
+    FillChar( PHook^, SizeOf(PJmp^), $90 {NOP} );
+  finally
+    Win32Check( VirtualProtect( PHook, SizeOf(PJmp^), OldProt, OldProt) );
+  end;
+  ContinueCloseClipboard := nil;
 
   HookInstalled := False;
   HookError := heNoError;
