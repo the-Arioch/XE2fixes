@@ -87,8 +87,8 @@ var // would be missed on pre-Vista
 
 var
   GoodLocales: array [1 .. 6] of LANGID =
-  ( LOCALE_USER_DEFAULT, LOCALE_SYSTEM_DEFAULT, LOCALE_CUSTOM_USER_DEFAULT,
-    LOCALE_CUSTOM_UI_DEFAULT, $ffFF, $ffFF);
+  ( $ffFF, LOCALE_USER_DEFAULT, LOCALE_SYSTEM_DEFAULT,
+    LOCALE_CUSTOM_DEFAULT, LOCALE_CUSTOM_UI_DEFAULT, $ffFF);
 
 procedure TryFixPaste;
 var
@@ -96,7 +96,7 @@ var
   Ansi: AnsiString; U16: UnicodeString;
   Locale: LCID; LocParsed: LongRec absolute Locale;
   MakeAnsi, MakeUni: boolean; W: LANGID;
-  i, L, cntA, cntU: integer;
+  i, L, cntA, cntU: Cardinal;
   cA: AnsiChar; cW: WideChar; cWParsed: WordRec absolute cW;
   procedure InnerSetBuffer(const Format: Word; const Buffer: Pointer; Size: Integer);
   var
@@ -122,7 +122,7 @@ begin
   if not IsClipboardFormatAvailable(CF_UNICODETEXT) then exit;
 
   Locale := GetThreadLocale;
-  GoodLocales[5] := LocParsed.Lo;
+  GoodLocales[1] := LocParsed.Lo;
 
   if nil <> @GetThreadUILanguage then
      GoodLocales[6] := GetThreadUILanguage();
@@ -166,8 +166,8 @@ begin
       GlobalUnlock(Data);
   end;
 
-//  MakeAnsi := False;
-//  MakeUni  := False;
+  MakeAnsi := False;
+  MakeUni  := False;
 
   if Length(Ansi) <= 0 then begin
      MakeAnsi := Length(U16) > 0;
@@ -189,29 +189,35 @@ begin
 
           if cWParsed.Hi = 0 then begin
              if ((cWParsed.Lo and $80) <> 0) and (cWParsed.Lo = Ord(cA)) then
-                Inc(cntA);
+                Inc(cntU);
           end else begin
              if (cA = '?') and (cWParsed.Lo <> $3F) then
-                Inc(cntU);
+                Inc(cntA);
           end;
         end;
 
         MakeAnsi := (cntA + cntA) > cntU;
         MakeUni  := (cntU + cntU) > cntA;
-        
-        if MakeAnsi then begin
-           Ansi := AnsiString(U16);
-           InnerSetBuffer( CF_TEXT, @Ansi[1], SizeOf(Ansi[1])*(Length(Ansi) + 1));
-
-           CharToOemA(@Ansi[1], @Ansi[1]);
-           InnerSetBuffer( CF_OEMTEXT, @Ansi[1], SizeOf(Ansi[1])*
-                                 (StrLen(PAnsiChar(@Ansi[1])) + 1));
-        end else
-        if MakeUni then begin
-           U16 := UnicodeString(Ansi);
-           InnerSetBuffer( CF_UNICODETEXT, @U16[1], SizeOf(U16[1])*(Length(U16) + 1) );
-        end;
      end;
+  end;
+
+  if MakeAnsi then begin
+     Ansi := AnsiString(U16);
+     InnerSetBuffer( CF_TEXT, @Ansi[1], SizeOf(Ansi[1])*(Length(Ansi) + 1));
+
+     CharToOemA(@Ansi[1], @Ansi[1]);
+     InnerSetBuffer( CF_OEMTEXT, @Ansi[1], SizeOf(Ansi[1])*
+                           (StrLen(PAnsiChar(@Ansi[1])) + 1));
+  end else
+  if MakeUni then begin
+     U16 := UnicodeString(Ansi);
+     InnerSetBuffer( CF_UNICODETEXT, @U16[1], SizeOf(U16[1])*(Length(U16) + 1) );
+  end;
+  if MakeUni or MakeAnsi then begin
+     if GoodLocales[6] < $FF00
+        then LocParsed.Lo := GoodLocales[6]
+        else LocParsed.Lo := GoodLocales[1];
+     InnerSetBuffer( CF_LOCALE, @LocParsed, SizeOf(LocParsed) );
   end;
 end;
 
