@@ -7,7 +7,7 @@ unit ClipboardLocaleFixOut;
 
 {$WARN SYMBOL_PLATFORM OFF}
 
-{$Define HookAtWill} // отладки для ~ for debug purposes
+{.$Define HookAtWill} // отладки для ~ for debug purposes
 
 {$T+} 
 interface
