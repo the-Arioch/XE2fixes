@@ -9,7 +9,7 @@ unit ClipboardLocaleFixOut;
 
 {$Define HookAtWill} // отладки для ~ for debug purposes
 
-{$T+}
+{$T+} 
 interface
 
 {$IfDef HookAtWill}
@@ -42,6 +42,9 @@ type
   NativeUInt = Cardinal; NativeInt = Integer;
 // https://blog.dummzeuch.de/2018/09/08/nativeint-nativeuint-type-in-various-delphi-versions/
 // https://stackoverflow.com/questions/7630781/delphi-2007-and-xe2-using-nativeint
+  PNativeUInt = ^NativeUInt; PNativeInt = ^NativeInt;
+// Delphi 2007- misses {$POINTERMATH ON} !!!
+// https://sergworks.wordpress.com/2010/06/09/a-hidden-feature-of-pointermath-directive-in-delphi-2009/  
 {$ifend}
 
 type
@@ -54,8 +57,8 @@ type
     function IsThisPattern: boolean; overload; inline;
     class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
 
-    function TargetAdress: Pointer; overload; inline;
-    class function TargetAdress(const at: pointer): Pointer; overload; inline; static;
+    function TargetAddress: Pointer; overload; inline;
+    class function TargetAddress(const at: pointer): Pointer; overload; inline; static;
   end;
 
 { RAbsoluteIndirectJmp }
@@ -70,15 +73,15 @@ begin
   Result := IsThisPattern(@Self);
 end;
 
-class function RAbsoluteIndirectJmp.TargetAdress(const at: pointer): Pointer;
+class function RAbsoluteIndirectJmp.TargetAddress(const at: pointer): Pointer;
 begin
   Assert(IsThisPattern(at), 'Wrong OpCode!');
   Result := PAbsoluteIndirectJmp(at)^.Addr^;
 end;
 
-function RAbsoluteIndirectJmp.TargetAdress: Pointer;
+function RAbsoluteIndirectJmp.TargetAddress: Pointer;
 begin
-  Result := TargetAdress(@Self);
+  Result := TargetAddress(@Self);
 end;
 
 // ==================
@@ -93,12 +96,12 @@ type
     function IsThisPattern: boolean; overload; inline;
     class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
 
-    function TargetAdress: Pointer; overload; inline;
-    class function TargetAdress(const at: pointer): Pointer; overload; inline; static;
+    function TargetAddress: Pointer; overload; inline;
+    class function TargetAddress(const at: pointer): Pointer; overload; static;
 
     procedure WriteHookInPlace(const NewCode: pointer); inline;
     procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; inline;
-    class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; inline; static;
+    class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; static;
   end;
 
 { RRelativeLongJmp }
@@ -113,31 +116,33 @@ begin
   Result := IsThisPattern(@Self);
 end;
 
-class function RRelativeLongJmp.TargetAdress(const at: pointer): Pointer;
+class function RRelativeLongJmp.TargetAddress(const at: pointer): Pointer;
+var PJmp: PRelativeLongJmp absolute at;
 begin
 {$R-}
   Result := Pointer(
        NativeInt(at)
-       + PRelativeLongJmp(at)^.Offset
+       + PJmp^.Offset
        + SizeOf(RRelativeLongJmp)
   );
 // https://wasm.in/threads/jmp-v-e9-kak-opredelit-operand-mashinnogo-koda.25851
 // https://stackoverflow.com/questions/8196835/calculate-the-jmp-opcodes
 end;
 
-function RRelativeLongJmp.TargetAdress: Pointer;
+function RRelativeLongJmp.TargetAddress: Pointer;
 begin
-  Result := TargetAdress(@Self);
+  Result := TargetAddress(@Self);
 end;
 
 class procedure RRelativeLongJmp.WriteHookToBuffer(const NewCode, OldCode,
   Buffer: pointer);
+var PJmp: PRelativeLongJmp absolute Buffer;
 begin
-  with PRelativeLongJmp(Buffer)^ do begin
+  with PJmp^ do begin
     Offset := NativeInt(NewCode)
             - SizeOf(RRelativeLongJmp)
             - NativeInt(OldCode);
-    Assert( NewCode = TargetAdress(), 'RRelativeLongJmp.WriteHook' );
+    Assert( NewCode = TargetAddress(), 'RRelativeLongJmp.WriteHook' );
     OpCode := EtalonOpCode;
   end;
 end;
@@ -217,9 +222,9 @@ begin
   b2.Lo := $EB; //  EBF9  jmp SHORT PTR $-5
   ShortInt(b2.Hi) := -( SizeOf(b2) + PreBuffLen );
 
-  PJ := Pointer(PByte(@Self) - PreBuffLen);
+  PJ := Pointer(PAnsiChar(@Self) - PreBuffLen);
 
-  PJ^.WriteHookToBuffer(NewCode, OldCode);
+  PJ^.WriteHookInPlace(NewCode);
 
   PWord(@Self)^ := w;
 end;
@@ -349,9 +354,10 @@ begin
   HookOriginalAddress := StartOfCloseClipboard;
 
   HookError := heNoError;
-  if CanMethod_HotPatch then Exit(1);
-  if CanMethod_FastSysCall then Exit(2);
+  Result := 1; if CanMethod_HotPatch then Exit;
+  Result := 2; if CanMethod_FastSysCall then Exit;
 
+  Result := 0;
   HookError := heNoMethod;
   HookOriginalAddress := nil;
 end;
@@ -359,6 +365,11 @@ end;
 procedure InstallHook;
 begin
   if HookInstalled then exit;
+
+{$IfDef HookAtWill} // debug
+  HookMethod := 0;
+  HookError := heNoError;
+{$EndIf}
 
   if HookMethod = 0 then
      HookMethod := detectMethod;
@@ -405,8 +416,9 @@ procedure InstallMethod_HotPatch;
 var
   OldProt: Cardinal;
   HP: PWindowsHotPatchBuffer;
+  PostHP: PWindowsHotPatchBuffer absolute ContinueCloseClipboard;
 begin
-  HP := Pointer(PByte(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
+  HP := Pointer(PAnsiChar(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
   Assert( @HP^.HPTarget = HookOriginalAddress, 'InstallMethod_HotPatch' );
 
   // force memory pages committed
@@ -414,6 +426,8 @@ begin
   OldProt := PNativeUInt(HookOriginalAddress)^;
   OldProt := PNativeUInt(HP)^;
 {$O+}
+
+  PostHP := HP; Inc(PostHP); // no pointermath in D2007
 
   Win32Check( VirtualProtect( HP, SizeOf(HP^), PAGE_EXECUTE_READWRITE, OldProt) );
   try
@@ -431,7 +445,7 @@ var
   OldProt: Cardinal;
   HP: PWindowsHotPatchBuffer;
 begin
-  HP := Pointer(PByte(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
+  HP := Pointer(PAnsiChar(HookOriginalAddress) - HP^.HPTarget.PreBuffLen);
   Assert( @HP^.HPTarget = HookOriginalAddress, 'RemoveMethod_HotPatch' );
 
   // force memory pages committed

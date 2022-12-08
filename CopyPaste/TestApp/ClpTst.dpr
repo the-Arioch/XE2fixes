@@ -1,9 +1,11 @@
 program ClpTst;
 
 uses
-  Vcl.Forms,
-  uclptst in '..\uclptst.pas' {Form31},
+  Forms,
+  uclptst in 'uclptst.pas' {Form31},
   ClipboardLocaleFixOut in '..\ClipboardLocaleFixOut.pas';
+
+{$WARN SYMBOL_PLATFORM OFF}{$T+}
 
 {$R *.res}
 

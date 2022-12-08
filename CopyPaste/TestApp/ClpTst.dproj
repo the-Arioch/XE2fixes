@@ -12,11 +12,15 @@
     <DCC_DebugInformation>False</DCC_DebugInformation>
     <DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
     <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-    <DCC_Define>RELEASE</DCC_Define>
+    <DCC_Define>RELEASE;HookAtWill</DCC_Define>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_Define>DEBUG</DCC_Define>
+    <DCC_Define>DEBUG;HookAtWill</DCC_Define>
+    <DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10</DCC_UnitSearchPath>
+    <DCC_ResourcePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10</DCC_ResourcePath>
+    <DCC_ObjPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10</DCC_ObjPath>
+    <DCC_IncludePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
@@ -62,15 +66,14 @@
     </Source>
   </Delphi.Personality> </BorlandProject></BorlandProject>
   </ProjectExtensions>
-  <ItemGroup />
+  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
   <ItemGroup>
     <DelphiCompile Include="ClpTst.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <DCCReference Include="..\ClipboardLocaleFixOut.pas" />
-    <DCCReference Include="..\uclptst.pas">
+    <DCCReference Include="uclptst.pas">
       <Form>Form31</Form>
     </DCCReference>
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
 </Project>

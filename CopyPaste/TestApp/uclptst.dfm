@@ -83,12 +83,32 @@ object Form31: TForm31
     OnClick = btnCECClick
   end
   object chkLoc: TCheckBox
-    Left = 32
-    Top = 200
+    Left = 24
+    Top = 176
     Width = 97
     Height = 17
     Caption = 'Force LOCALE'
     TabOrder = 7
     OnClick = chkLocClick
+  end
+  object chkPatchOut: TCheckBox
+    Left = 96
+    Top = 223
+    Width = 113
+    Height = 17
+    Alignment = taLeftJustify
+    Caption = 'Patch Copy(Out)'
+    TabOrder = 8
+    OnClick = chkPatchOutClick
+  end
+  object chkPatchIn: TCheckBox
+    Left = 96
+    Top = 254
+    Width = 113
+    Height = 17
+    Alignment = taLeftJustify
+    Caption = 'Patch Paste(In)'
+    Enabled = False
+    TabOrder = 9
   end
 end

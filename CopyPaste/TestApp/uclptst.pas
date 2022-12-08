@@ -3,9 +3,15 @@ unit uclptst;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, StdCtrls, Classes,
-  Controls;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, StdCtrls;
+
+{$if CompilerVersion < 19}
+const WM_CLIPBOARDUPDATE = $031D; // missed in Delphi 2007
+type UnicodeString = widestring;
+{$ifend}
+
+{$WARN SYMBOL_PLATFORM OFF}{$T+}
 
 type
   TForm31 = class(TForm)
@@ -17,6 +23,8 @@ type
     btnCCC: TButton;
     btnCEC: TButton;
     chkLoc: TCheckBox;
+    chkPatchOut: TCheckBox;
+    chkPatchIn: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btnA2UClick(Sender: TObject);
     procedure btnCCCClick(Sender: TObject);
@@ -25,6 +33,7 @@ type
     procedure btnCSDClick(Sender: TObject);
     procedure btnU2AClick(Sender: TObject);
     procedure chkLocClick(Sender: TObject);
+    procedure chkPatchOutClick(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
   private
@@ -42,12 +51,35 @@ var
 
 implementation
 
-uses AnsiStrings, Clipbrd;
+uses
+{$if CompilerVersion >= 19}
+  AnsiStrings,
+{$ifend}
+  Clipbrd
+  , ClipboardLocaleFixOut
+  ;
 
 procedure SetClipAnsi(const sA: AnsiString); forward;
 procedure SetClipUni (const sU: UnicodeString); forward;
 function  GetClipAnsi: AnsiString; forward;
+function  GetClipUni: UnicodeString; forward;
 function NeedLocale: boolean; forward;
+
+{$if CompilerVersion < 19}
+function BoolToStr(const B: Boolean; const Dummy: Boolean = False): string;
+begin
+  if B then Result := 'TRUE' else RESULT := 'FALSE';
+end;
+
+function RemoveClipboardFormatListener(hWndNewViewer: HWND): BOOL; stdcall;
+external user32 name 'RemoveClipboardFormatListener';
+{$EXTERNALSYM  RemoveClipboardFormatListener}
+
+function AddClipboardFormatListener(hWndNewViewer: HWND): BOOL; stdcall;
+external user32 name 'AddClipboardFormatListener';
+{$EXTERNALSYM  AddClipboardFormatListener}
+{$ifend}
+
 {$R *.dfm}
 
 var gb, InjectLCID: boolean;
@@ -113,7 +145,7 @@ end;
 procedure TForm31.btnA2UClick(Sender: TObject);
 begin
   SetClipAnsi( msgA );
-  Log( Clipboard.AsText );
+  Log( GetClipUni );
 end;
 
 procedure TForm31.btnU2AClick(Sender: TObject);
@@ -222,6 +254,29 @@ begin
   end;
 end;
 
+function  GetClipUni: UnicodeString;
+var
+  Data: THandle;
+begin
+  gb := OpenClipboard(Application.Handle);
+  Win32Check(gb);
+
+//  NeedLocale;
+
+  Data := GetClipboardData(CF_UNICODETEXT);
+  try
+    if Data <> 0 then
+      Result := PWideChar(GlobalLock(Data))
+    else
+      Result := '';
+  finally
+    if Data <> 0 then
+      GlobalUnlock(Data);
+    gb := CloseClipboard;
+    Win32Check(gb);
+  end;
+end;
+
 procedure TForm31.chkLocClick(Sender: TObject);
 begin
   InjectLCID := chkLoc.Checked;
@@ -271,6 +326,18 @@ begin
 
   Assert( n1 = n2 );
   Result := n2;
+end;
+
+procedure TForm31.chkPatchOutClick(Sender: TObject);
+var s: string;
+begin
+  if chkPatchOut.Checked
+     then ClipboardLocaleFixOut.InstallHook
+     else ClipboardLocaleFixOut.RemoveHook;
+
+  s := 'Error code (zero for OK): ' + IntToStr(Ord(ClipboardLocaleFixOut.HookError))
+     + '   Patch installed: ' + BoolToStr( ClipboardLocaleFixOut.HookInstalled );
+  ShowMessage(s);
 end;
 
 procedure TForm31.FormHide(Sender: TObject);
