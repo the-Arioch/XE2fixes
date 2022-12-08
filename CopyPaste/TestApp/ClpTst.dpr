@@ -2,8 +2,8 @@ program ClpTst;
 
 uses
   Vcl.Forms,
-  uclptst in 'uclptst.pas' {Form31},
-  ClipboardLocaleFixOut in 'ClipboardLocaleFixOut.pas';
+  uclptst in '..\uclptst.pas' {Form31},
+  ClipboardLocaleFixOut in '..\ClipboardLocaleFixOut.pas';
 
 {$R *.res}
 
