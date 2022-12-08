@@ -108,8 +108,8 @@ object Form31: TForm31
     Height = 17
     Alignment = taLeftJustify
     Caption = 'Patch Paste(In)'
-    Enabled = False
     TabOrder = 9
+    OnClick = chkPatchInClick
   end
   object btnGetLCID: TButton
     Left = 48
@@ -126,6 +126,7 @@ object Form31: TForm31
     Width = 97
     Height = 17
     Caption = 'Guess LOCALE'
+    Enabled = False
     TabOrder = 11
     OnClick = chkLocEuClick
   end

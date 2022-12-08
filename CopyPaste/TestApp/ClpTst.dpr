@@ -4,7 +4,8 @@ uses
   Forms,
   uclptst in 'uclptst.pas' {Form31},
   ClipboardLocaleFixOut in '..\ClipboardLocaleFixOut.pas',
-  ClipboardLocaleFixIn in '..\ClipboardLocaleFixIn.pas';
+  ClipboardLocaleFixIn in '..\ClipboardLocaleFixIn.pas',
+  Win32SimpleHooks in '..\Win32SimpleHooks.pas';
 
 {$WARN SYMBOL_PLATFORM OFF}{$T+}
 
