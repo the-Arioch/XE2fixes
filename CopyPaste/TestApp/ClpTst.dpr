@@ -3,7 +3,8 @@ program ClpTst;
 uses
   Forms,
   uclptst in 'uclptst.pas' {Form31},
-  ClipboardLocaleFixOut in '..\ClipboardLocaleFixOut.pas';
+  ClipboardLocaleFixOut in '..\ClipboardLocaleFixOut.pas',
+  ClipboardLocaleFixIn in '..\ClipboardLocaleFixIn.pas';
 
 {$WARN SYMBOL_PLATFORM OFF}{$T+}
 

@@ -83,7 +83,7 @@ object Form31: TForm31
     OnClick = btnCECClick
   end
   object chkLoc: TCheckBox
-    Left = 24
+    Left = 8
     Top = 176
     Width = 97
     Height = 17
@@ -92,8 +92,8 @@ object Form31: TForm31
     OnClick = chkLocClick
   end
   object chkPatchOut: TCheckBox
-    Left = 96
-    Top = 223
+    Left = 111
+    Top = 176
     Width = 113
     Height = 17
     Alignment = taLeftJustify
@@ -102,13 +102,31 @@ object Form31: TForm31
     OnClick = chkPatchOutClick
   end
   object chkPatchIn: TCheckBox
-    Left = 96
-    Top = 254
+    Left = 112
+    Top = 199
     Width = 113
     Height = 17
     Alignment = taLeftJustify
     Caption = 'Patch Paste(In)'
     Enabled = False
     TabOrder = 9
+  end
+  object btnGetLCID: TButton
+    Left = 48
+    Top = 239
+    Width = 129
+    Height = 41
+    Caption = 'Paste Locale'
+    TabOrder = 10
+    OnClick = btnGetLCIDClick
+  end
+  object chkLocEu: TCheckBox
+    Left = 8
+    Top = 199
+    Width = 97
+    Height = 17
+    Caption = 'Guess LOCALE'
+    TabOrder = 11
+    OnClick = chkLocEuClick
   end
 end
