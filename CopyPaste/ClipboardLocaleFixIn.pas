@@ -353,13 +353,11 @@ procedure InstallMethod_FastSysCall;
 var
   PJmp: PRelativeLongJmp;
   PostJmp: PRelativeLongJmp absolute ContinueOpenClipboard;
-  PHook: pointer;
   n: SIZE_T;
   OldProt: Cardinal;
   Success: Boolean;
 begin
   // copy MOV EAX, XXX to OpenClipboard5Bytes
-  PHook := @ContinueOpenClipboard;
   PJmp := HookOriginalAddress;
 
   Success := WriteProcessMemory(GetCurrentProcess,
