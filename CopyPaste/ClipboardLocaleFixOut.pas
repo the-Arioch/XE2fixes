@@ -49,7 +49,7 @@ begin
   try
     Loc := GlobalLock(Mem);
     try
-      Loc^ := LOCALE_USER_DEFAULT;
+      Loc^ := GetThreadLocale(); // LOCALE_USER_DEFAULT;
     finally
       GlobalUnlock(Mem);
     end;
