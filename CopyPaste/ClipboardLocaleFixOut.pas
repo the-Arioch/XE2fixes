@@ -196,6 +196,7 @@ begin
   Win32Check( VirtualProtect( HP, SizeOf(HP^), PAGE_EXECUTE_READWRITE, OldProt) );
   try
     HP^.WriteHookInPlace(@InterceptCloseClipboard);
+    FlushInstructionCache(GetCurrentProcess, HP, SizeOf(HP^));
   finally
     Win32Check( VirtualProtect( HP, SizeOf(HP^), OldProt, OldProt) );
   end;
@@ -221,6 +222,7 @@ begin
   Win32Check( VirtualProtect( HP, SizeOf(HP^), PAGE_EXECUTE_READWRITE, OldProt) );
   try
     HP^.HPTarget.RemoveHook;
+    FlushInstructionCache(GetCurrentProcess, HP, SizeOf(HP^));
   finally
     Win32Check( VirtualProtect( HP, SizeOf(HP^), OldProt, OldProt) );
   end;
@@ -254,6 +256,7 @@ begin
   Win32Check( VirtualProtect( PJmp, SizeOf(PJmp^), PAGE_EXECUTE_READWRITE, OldProt) );
   try
     PJmp^.WriteHookInPlace(@InterceptCloseClipboard);
+    FlushInstructionCache(GetCurrentProcess, PJmp, SizeOf(PJmp^));
   finally
     Win32Check( VirtualProtect( PJmp, SizeOf(PJmp^), OldProt, OldProt) );
   end;
@@ -285,6 +288,7 @@ begin
   Win32Check( VirtualProtect( PHook, SizeOf(PJmp^), PAGE_EXECUTE_READWRITE, OldProt) );
   try
     FillChar( PHook^, SizeOf(PJmp^), $90 {NOP} );
+    FlushInstructionCache(GetCurrentProcess, PHook, SizeOf(PJmp^));
   finally
     Win32Check( VirtualProtect( PHook, SizeOf(PJmp^), OldProt, OldProt) );
   end;
