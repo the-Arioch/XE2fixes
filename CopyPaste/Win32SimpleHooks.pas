@@ -7,14 +7,23 @@ interface
 {$WARN SYMBOL_PLATFORM OFF}{$T+}{$W-}
 
 {$if CompilerVersion < 19}
+uses Types;
+
 type
   SIZE_T = DWORD;
   NativeUInt = Cardinal; NativeInt = Integer;
 // https://blog.dummzeuch.de/2018/09/08/nativeint-nativeuint-type-in-various-delphi-versions/
 // https://stackoverflow.com/questions/7630781/delphi-2007-and-xe2-using-nativeint
   PNativeUInt = ^NativeUInt; PNativeInt = ^NativeInt;
-// Delphi 2007- misses {$POINTERMATH ON} !!!
+// Delphi 2007 - misses {$POINTERMATH ON} !!!
 // https://sergworks.wordpress.com/2010/06/09/a-hidden-feature-of-pointermath-directive-in-delphi-2009/
+
+{$Define ICE2007}
+// when the advanced records were moved to a separate unit and got into "interface" section
+// Delphi 2007 started giving Internal Compiler Error on non-static inline methods.
+// [DCC Error] Win32SimpleHooks.pas(250): F2084 Internal Error: AV21BA6FD9-R84C40AB7-0
+// [DCC Error] Разрушительный сбой (Исключение из HRESULT: 0x8000FFFF (E_UNEXPECTED))
+// [DCC Error] Win32SimpleHooks.pas(250): F2084 Internal Error: URW926
 {$ifend}
 
 type
@@ -24,11 +33,11 @@ type
     Addr: ^Pointer;
     const EtalonOpCode = $25FF;
 
-    function IsThisPattern: boolean; overload; inline;
-    class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
+    function IsThisPattern: boolean; overload; {$IfNDef ICE2007} inline; {$EndIf}
+    class function IsThisPattern(const at: pointer): boolean; overload; {$IfNDef ICE2007} inline; {$EndIf} static;
 
-    function TargetAddress: Pointer; overload; inline;
-    class function TargetAddress(const at: pointer): Pointer; overload; inline; static;
+    function TargetAddress: Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf}
+    class function TargetAddress(const at: pointer): Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf} static;
   end;
 
 type
@@ -38,14 +47,14 @@ type
     Offset: NativeInt;
     const EtalonOpCode = $E9;
 
-    function IsThisPattern: boolean; overload; inline;
+    function IsThisPattern: boolean; overload; {$IfNDef ICE2007} inline; {$EndIf}
     class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
 
-    function TargetAddress: Pointer; overload; inline;
+    function TargetAddress: Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf}
     class function TargetAddress(const at: pointer): Pointer; overload; static;
 
-    procedure WriteHookInPlace(const NewCode: pointer); inline;
-    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; inline;
+    procedure WriteHookInPlace(const NewCode: pointer); {$IfNDef ICE2007} inline; {$EndIf}
+    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; {$IfNDef ICE2007} inline; {$EndIf}
     class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; static;
   end;
 
@@ -67,8 +76,8 @@ type
   RWindowsHotPatchBuffer = packed record
     CodeBuffer: array [1..RWindowsHotPatch.PreBuffLen] of byte;
     HPTarget: RWindowsHotPatch;
-    procedure WriteHookInPlace(const NewCode: pointer); inline;
-    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; inline;
+    procedure WriteHookInPlace(const NewCode: pointer); {$IfNDef ICE2007} inline; {$EndIf}
+    procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; {$IfNDef ICE2007} inline; {$EndIf}
     class procedure WriteHookToBuffer(const NewCode, OldCode, Buffer: pointer); overload; inline; static;
   end;
 
@@ -80,7 +89,7 @@ type
     const EtalonOpCode = $B8;  // MOV EAX, CONST
           EtalonOpCodeMask = $07; // MOV EAX..EDI, CONST
 
-    function IsThisPattern: boolean; overload; inline;
+    function IsThisPattern: boolean; overload; {$IfNDef ICE2007} inline; {$EndIf}
     class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
   end;
 
