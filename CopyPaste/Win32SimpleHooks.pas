@@ -50,8 +50,9 @@ type
     function IsThisPattern: boolean; overload; {$IfNDef ICE2007} inline; {$EndIf}
     class function IsThisPattern(const at: pointer): boolean; overload; inline; static;
 
-    function TargetAddress: Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf}
-    class function TargetAddress(const at: pointer): Pointer; overload; static;
+    function TargetAddressInPlace: Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf}
+    function TargetAddress(const OldCode: Pointer): Pointer; overload; {$IfNDef ICE2007} inline; {$EndIf}
+    class function TargetAddress(const at, OldCode: pointer): Pointer; overload; static;
 
     procedure WriteHookInPlace(const NewCode: pointer); {$IfNDef ICE2007} inline; {$EndIf}
     procedure WriteHookToBuffer(const NewCode, OldCode: pointer); overload; {$IfNDef ICE2007} inline; {$EndIf}
@@ -132,12 +133,12 @@ begin
   Result := IsThisPattern(@Self);
 end;
 
-class function RRelativeLongJmp.TargetAddress(const at: pointer): Pointer;
+class function RRelativeLongJmp.TargetAddress(const at, OldCode: pointer): Pointer;
 var PJmp: PRelativeLongJmp absolute at;
 begin
 {$R-}
   Result := Pointer(
-       NativeInt(at)
+       NativeInt(OldCode)
        + PJmp^.Offset
        + SizeOf(RRelativeLongJmp)
   );
@@ -145,9 +146,14 @@ begin
 // https://stackoverflow.com/questions/8196835/calculate-the-jmp-opcodes
 end;
 
-function RRelativeLongJmp.TargetAddress: Pointer;
+function RRelativeLongJmp.TargetAddress(const OldCode: Pointer): Pointer;
 begin
-  Result := TargetAddress(@Self);
+  Result := RRelativeLongJmp.TargetAddress(@Self, OldCode);
+end;
+
+function RRelativeLongJmp.TargetAddressInPlace: Pointer;
+begin
+  Result := RRelativeLongJmp.TargetAddress(@Self, @Self);
 end;
 
 class procedure RRelativeLongJmp.WriteHookToBuffer(const NewCode, OldCode,
@@ -158,7 +164,7 @@ begin
     Offset := NativeInt(NewCode)
 	    - SizeOf(RRelativeLongJmp)
 	    - NativeInt(OldCode);
-    Assert( NewCode = TargetAddress(), 'RRelativeLongJmp.WriteHook' );
+    Assert( NewCode = TargetAddress(OldCode), 'RRelativeLongJmp.WriteHook' );
     OpCode := EtalonOpCode;
   end;
 end;
