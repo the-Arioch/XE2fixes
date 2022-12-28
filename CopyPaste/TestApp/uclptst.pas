@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, StdCtrls;
+  Controls, Forms, Dialogs, StdCtrls, Vcl.ComCtrls;
 
 {$if CompilerVersion < 19}
 const WM_CLIPBOARDUPDATE = $031D; // missed in Delphi 2007
@@ -27,12 +27,15 @@ type
     chkPatchIn: TCheckBox;
     btnGetLCID: TButton;
     chkLocEu: TCheckBox;
+    btnCtrls: TButton;
+    cbb1: TComboBoxEx;
     procedure FormCreate(Sender: TObject);
     procedure btnA2UClick(Sender: TObject);
     procedure btnCCCClick(Sender: TObject);
     procedure btnCECClick(Sender: TObject);
     procedure btnCOCClick(Sender: TObject);
     procedure btnCSDClick(Sender: TObject);
+    procedure btnCtrlsClick(Sender: TObject);
     procedure btnGetLCIDClick(Sender: TObject);
     procedure btnU2AClick(Sender: TObject);
     procedure chkLocClick(Sender: TObject);
@@ -120,6 +123,10 @@ begin
   Tag := GetClipboardSequenceNumber; // linker
   Memo1.Clear;
   Tag := Memo1.Lines.Count;
+
+  cbb1.Items.Add(msgU);
+  cbb1.Items.Add(msgA);
+  cbb1.ItemIndex := 1;
 end;
 
 procedure TForm31.btnCCCClick(Sender: TObject);
@@ -360,6 +367,16 @@ begin
 
   Assert( n1 = n2 );
   Result := n2;
+end;
+
+procedure TForm31.btnCtrlsClick(Sender: TObject);
+begin
+  Clipboard.Clear;
+  PostMessage( cbb1.Handle, WM_COPY, 10, 20);
+  Application.ProcessMessages;
+
+  Log( GetClipAnsi );
+  Log( GetClipUni );
 end;
 
 procedure TForm31.btnGetLCIDClick(Sender: TObject);

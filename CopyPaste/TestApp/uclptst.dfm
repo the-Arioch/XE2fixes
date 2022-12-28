@@ -2,7 +2,7 @@ object Form31: TForm31
   Left = 0
   Top = 0
   Caption = 'Clipboard API test'
-  ClientHeight = 485
+  ClientHeight = 551
   ClientWidth = 756
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -21,7 +21,7 @@ object Form31: TForm31
     Left = 240
     Top = 3
     Width = 513
-    Height = 479
+    Height = 545
     Margins.Left = 240
     Align = alClient
     Lines.Strings = (
@@ -30,7 +30,7 @@ object Form31: TForm31
   end
   object btnA2U: TButton
     Left = 24
-    Top = 32
+    Top = 104
     Width = 185
     Height = 41
     Caption = 'ANSI -> Unicode'
@@ -39,7 +39,7 @@ object Form31: TForm31
   end
   object btnU2A: TButton
     Left = 24
-    Top = 104
+    Top = 160
     Width = 185
     Height = 41
     Caption = 'Unicode -> ANSI'
@@ -48,7 +48,7 @@ object Form31: TForm31
   end
   object btnCOC: TButton
     Left = 24
-    Top = 344
+    Top = 400
     Width = 185
     Height = 41
     Caption = 'call OC'
@@ -57,7 +57,7 @@ object Form31: TForm31
   end
   object btnCSD: TButton
     Left = 24
-    Top = 391
+    Top = 447
     Width = 185
     Height = 41
     Caption = 'call SD'
@@ -66,7 +66,7 @@ object Form31: TForm31
   end
   object btnCCC: TButton
     Left = 24
-    Top = 436
+    Top = 492
     Width = 185
     Height = 41
     Caption = 'call CC'
@@ -75,7 +75,7 @@ object Form31: TForm31
   end
   object btnCEC: TButton
     Left = 24
-    Top = 297
+    Top = 353
     Width = 185
     Height = 41
     Caption = 'call EC'
@@ -84,7 +84,7 @@ object Form31: TForm31
   end
   object chkLoc: TCheckBox
     Left = 8
-    Top = 176
+    Top = 232
     Width = 97
     Height = 17
     Caption = 'Force LOCALE'
@@ -93,7 +93,7 @@ object Form31: TForm31
   end
   object chkPatchOut: TCheckBox
     Left = 111
-    Top = 176
+    Top = 232
     Width = 113
     Height = 17
     Alignment = taLeftJustify
@@ -103,7 +103,7 @@ object Form31: TForm31
   end
   object chkPatchIn: TCheckBox
     Left = 112
-    Top = 199
+    Top = 255
     Width = 113
     Height = 17
     Alignment = taLeftJustify
@@ -113,7 +113,7 @@ object Form31: TForm31
   end
   object btnGetLCID: TButton
     Left = 48
-    Top = 239
+    Top = 295
     Width = 129
     Height = 41
     Caption = 'Paste Locale'
@@ -122,12 +122,29 @@ object Form31: TForm31
   end
   object chkLocEu: TCheckBox
     Left = 8
-    Top = 199
+    Top = 255
     Width = 97
     Height = 17
     Caption = 'Guess LOCALE'
     Enabled = False
     TabOrder = 11
     OnClick = chkLocEuClick
+  end
+  object btnCtrls: TButton
+    Left = 24
+    Top = 48
+    Width = 185
+    Height = 41
+    Caption = 'ComCtrls && User32'
+    TabOrder = 12
+    OnClick = btnCtrlsClick
+  end
+  object cbb1: TComboBoxEx
+    Left = 32
+    Top = 8
+    Width = 177
+    Height = 22
+    ItemsEx = <>
+    TabOrder = 13
   end
 end

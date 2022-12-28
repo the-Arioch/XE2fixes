@@ -99,6 +99,19 @@ begin
   Result := GetProcAddress(LoadLibrary(user32), 'CloseClipboard' );
 end;
 
+function StartOfNtUserCloseClipboard: pointer;
+var LIB: THandle;
+begin
+  Result := nil;
+  LIB := LoadLibrary('Win32U.DLL');
+  if 0 = LIB then exit; // Old OS without user/kernel gateway
+
+  Result := GetProcAddress(LIB, 'NtUserCloseClipboard' );
+//  FreeLibrary(LIB); - no! if this library present it is the real user32.dll
+//  backend and is never freed until process exit. Also, we should not release
+//  our hook code path.
+end;
+
 function CanMethod_HotPatch: boolean; forward;
 function CanMethod_FastSysCall: boolean; forward;
 
@@ -114,11 +127,18 @@ begin
   HookError := heNotWinNT;
   if Win32Platform <> VER_PLATFORM_WIN32_NT then exit;
 
-  HookOriginalAddress := StartOfCloseClipboard;
-
   HookError := heNoError;
-  Result := 1; if CanMethod_HotPatch then Exit;
-  Result := 2; if CanMethod_FastSysCall then Exit;
+
+  HookOriginalAddress := StartOfNtUserCloseClipboard;
+  if nil <> HookOriginalAddress then begin
+     Result := 3; if CanMethod_FastSysCall then Exit;
+  end;
+
+  HookOriginalAddress := StartOfCloseClipboard;
+  if nil <> HookOriginalAddress then begin
+     Result := 1; if CanMethod_HotPatch then Exit;
+     Result := 2; if CanMethod_FastSysCall then Exit;
+  end;
 
   Result := 0;
   HookError := heNoMethod;
@@ -141,7 +161,7 @@ begin
      HookError := heCanNotInstall;
      case HookMethod of
        1: InstallMethod_HotPatch;
-       2: InstallMethod_FastSysCall;
+       2,3: InstallMethod_FastSysCall;
      else
        HookError := heNoMethod;
      end;
@@ -156,7 +176,7 @@ begin
 
   case HookMethod of
     1: RemoveMethod_HotPatch;
-    2: RemoveMethod_FastSysCall;
+    2, 3: RemoveMethod_FastSysCall;
   else
     HookError := heNoMethod;
   end;
@@ -297,6 +317,27 @@ begin
   HookInstalled := False;
   HookError := heNoError;
 end;
+
+(****  Win10 Pro 22H2 19045.2364
+win32u.NtUserCloseClipboard:
+76591C20 B8C2100100       mov eax,$000110c2
+76591C25 BA10635976       mov edx,$76596310
+76591C2A FFD2             call edx
+76591C2C C3               ret
+76591C2D 8D4900           lea ecx,[ecx+$00]
+win32u.NtUserOpenClipboard:
+76591C30 B8C3100700       mov eax,$000710c3
+76591C35 BA10635976       mov edx,$76596310
+76591C3A FFD2             call edx
+76591C3C C20800           ret $0008
+76591C3F 90               nop
+win32u.NtUserSetClipboardData:
+76591C40 B8C4100F00       mov eax,$000f10c4
+76591C45 BA10635976       mov edx,$76596310
+76591C4A FFD2             call edx
+76591C4C C20C00           ret $000c
+76591C4F 90               nop
+****)
 
 {$IfNDef HookAtWill}
 initialization
